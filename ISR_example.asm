@@ -22,8 +22,8 @@ $LIST
 ;                               -------
 ;
 
-CLK           EQU 16600000 ; Microcontroller system frequency in Hz
-TIMER0_RATE   EQU 4096     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+CLK           EQU 16000000 ; Microcontroller system frequency in Hz
+TIMER0_RATE   EQU 16384     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
 TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
 TIMER2_RATE   EQU 1000     ; 1000Hz, for a timer tick of 1ms
 TIMER2_RELOAD EQU ((65536-(CLK/TIMER2_RATE)))
@@ -82,6 +82,7 @@ LCD_D7 equ P0.3
 
 $NOLIST
 $include(LCD_4bit.inc) ; A library of LCD related functions and utility macros
+$include(NotePlayer.inc)
 $LIST
 
 ;                     1234567890123456    <- This helps determine the location of the counter
@@ -116,7 +117,10 @@ Timer0_ISR:
 	mov TH0, #high(TIMER0_RELOAD)
 	mov TL0, #low(TIMER0_RELOAD)
 	setb TR0
-	cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+	
+	 
+; cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+	lcall NotesUpdate
 	reti
 
 ;---------------------------------;
@@ -211,6 +215,9 @@ main:
     Send_Constant_String(#Initial_Message)
     setb half_seconds_flag
 	mov BCD_counter, #0x00
+	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	lcall NotesInit
 	
 	; After initialization the program stays in this 'forever' loop
 loop:
