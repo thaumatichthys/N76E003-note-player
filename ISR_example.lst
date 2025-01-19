@@ -32,7 +32,7 @@
 0000             34   
 0000             35   ; Reset vector
 0000             36   org 0x0000
-0000 0201A0      37       ljmp main
+0000 02019E      37       ljmp main
 0003             38   
 0003             39   ; External interrupt 0 vector (not used in this code)
 0003             40   org 0x0003
@@ -229,103 +229,106 @@
 017A            164   Inc_Done:
 017A            165            ; Check if half second has passed
 017A E530       166            mov a, Count1ms+0
-017C B4F41C     167            cjne a, #low(500), Timer2_ISR_done ; Warning: this instruction changes the carry flag!
+017C B4F41A     167            cjne a, #low(500), Timer2_ISR_done ; Warning: this instruction changes the carry flag!
 017F E531       168            mov a, Count1ms+1
-0181 B40117     169            cjne a, #high(500), Timer2_ISR_done
+0181 B40115     169            cjne a, #high(500), Timer2_ISR_done
 0184            170            
 0184            171            ; 500 milliseconds have passed.  Set a flag so the main program knows
 0184 D200       172            setb half_seconds_flag ; Let the main program know half second had passed
-0186 B28C       173            cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
-0188            174            ; Reset to zero the milli-seconds counter, it is a 16-bit variable
-0188 E4         175            clr a
-0189 F530       176            mov Count1ms+0, a
-018B F531       177            mov Count1ms+1, a
-018D            178            ; Increment the BCD counter
-018D E532       179            mov a, BCD_counter
-018F 309604     180            jnb UPDOWN, Timer2_ISR_decrement
-0192 2401       181            add a, #0x01
-0194 8002       182            sjmp Timer2_ISR_da
-0196            183   Timer2_ISR_decrement:
-0196 2499       184            add a, #0x99 ; Adding the 10-complement of -1 is like subtracting 1.
-0198            185   Timer2_ISR_da:
-0198 D4         186            da a ; Decimal adjust instruction.  Check datasheet for more details!
-0199 F532       187            mov BCD_counter, a
-019B            188            
-019B            189   Timer2_ISR_done:
-019B D0D0       190            pop psw
-019D D0E0       191            pop acc
-019F 32         192            reti
-01A0            193   
-01A0            194   ;---------------------------------;
-01A0            195   ; Main program. Includes hardware ;
-01A0            196   ; initialization and 'forever'    ;
-01A0            197   ; loop.                           ;
-01A0            198   ;---------------------------------;
-01A0            199   main:
-01A0            200            ; Initialization
-01A0 75817F     201       mov SP, #0x7F
-01A3 75B100     202       mov P0M1, #0x00
-01A6 75B200     203       mov P0M2, #0x00
-01A9 75B300     204       mov P1M1, #0x00
-01AC 75B400     205       mov P1M2, #0x00
-01AF 75AD00     206       mov P3M2, #0x00
-01B2 75AD00     207       mov P3M2, #0x00
-01B5            208             
-01B5 120129     209       lcall Timer0_Init
-01B8 12014D     210       lcall Timer2_Init
-01BB D2AF       211       setb EA   ; Enable Global interrupts
-01BD 120087     212       lcall LCD_4BIT
-01C0            213       ; For convenience a few handy macros are included in 'LCD_4bit.inc':
-01C0 C0E0       214            push acc
-01C2 7401       214            mov a, #1
-01C4 14         214            dec a
-01C5 1200C7     214            lcall ?Set_Cursor_1 ; Select column and row
-01C8 D0E0       214            pop acc
-01CA C083       215            push dph
-01CC C082       215            push dpl
-01CE C0E0       215            push acc
-01D0 900118     215            mov dptr, #Initial_Message
-01D3 1200BA     215            lcall ?Send_Constant_String
-01D6 D0E0       215            pop acc
-01D8 D082       215            pop dpl
-01DA D083       215            pop dph
-01DC D200       216       setb half_seconds_flag
-01DE 753200     217            mov BCD_counter, #0x00
-01E1            218            
-01E1            219            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-01E1 120103     220            lcall NotesInit
-01E4            221            
-01E4            222            ; After initialization the program stays in this 'forever' loop
-01E4            223   loop:
-01E4 20951C     224            jb CLEAR_BUTTON, loop_a  ; if the 'CLEAR' button is not pressed skip
-01E7 C002       225            push AR2
-01E9 7A32       225            mov R2, #50
-01EB 120038     225            lcall ?Wait_Milli_Seconds
-01EE D002       225            pop AR2         ; Debounce delay.  This macro is also in 'LCD_4bit.inc'
-01F0 209510     226            jb CLEAR_BUTTON, loop_a  ; if the 'CLEAR' button is not pressed skip
-01F3 3095FD     227            jnb CLEAR_BUTTON, $             ; Wait for button release.  The '$' means: jump to same instruction.
-01F6            228            ; A valid press of the 'CLEAR' button has been detected, reset the BCD counter.
-01F6            229            ; But first stop timer 2 and reset the milli-seconds counter, to resync everything.
-01F6 C2CA       230            clr TR2                 ; Stop timer 2
-01F8 E4         231            clr a
-01F9 F530       232            mov Count1ms+0, a
-01FB F531       233            mov Count1ms+1, a
-01FD            234            ; Now clear the BCD counter
-01FD F532       235            mov BCD_counter, a
-01FF D2CA       236            setb TR2                ; Start timer 2
-0201 8003       237            sjmp loop_b             ; Display the new value
-0203            238   loop_a:
-0203 3000DE     239            jnb half_seconds_flag, loop
-0206            240   loop_b:
-0206 C200       241       clr half_seconds_flag ; We clear this flag in the main loop, but it is set in the ISR for timer 2
-0208 C0E0       242            push acc
-020A 740E       242            mov a, #14
-020C 14         242            dec a
-020D 1200C7     242            lcall ?Set_Cursor_1 ; Select column and row
-0210 D0E0       242            pop acc     ; the place in the LCD where we want the BCD counter value
-0212 C000       243            push ar0
-0214 A832       243            mov r0, BCD_counter
-0216 1200CC     243            lcall ?Display_BCD
-0219 D000       243            pop ar0 ; This macro is also in 'LCD_4bit.inc'
-021B 0201E4     244       ljmp loop
-021E            245   END
+0186            173            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
+0186            174                                                                            ;               cpl TR0
+0186            175            ; Reset to zero the milli-seconds counter, it is a 16-bit variable
+0186 E4         176            clr a
+0187 F530       177            mov Count1ms+0, a
+0189 F531       178            mov Count1ms+1, a
+018B            179            ; Increment the BCD counter
+018B E532       180            mov a, BCD_counter
+018D 309604     181            jnb UPDOWN, Timer2_ISR_decrement
+0190 2401       182            add a, #0x01
+0192 8002       183            sjmp Timer2_ISR_da
+0194            184   Timer2_ISR_decrement:
+0194 2499       185            add a, #0x99 ; Adding the 10-complement of -1 is like subtracting 1.
+0196            186   Timer2_ISR_da:
+0196 D4         187            da a ; Decimal adjust instruction.  Check datasheet for more details!
+0197 F532       188            mov BCD_counter, a
+0199            189            
+0199            190   Timer2_ISR_done:
+0199 D0D0       191            pop psw
+019B D0E0       192            pop acc
+019D 32         193            reti
+019E            194   
+019E            195   ;---------------------------------;
+019E            196   ; Main program. Includes hardware ;
+019E            197   ; initialization and 'forever'    ;
+019E            198   ; loop.                           ;
+019E            199   ;---------------------------------;
+019E            200   main:
+019E            201            ; Initialization
+019E 75817F     202       mov SP, #0x7F
+01A1 75B100     203       mov P0M1, #0x00
+01A4 75B200     204       mov P0M2, #0x00
+01A7 75B300     205       mov P1M1, #0x00
+01AA 75B400     206       mov P1M2, #0x00
+01AD 75AD00     207       mov P3M2, #0x00
+01B0 75AD00     208       mov P3M2, #0x00
+01B3            209             
+01B3 120129     210       lcall Timer0_Init
+01B6 12014D     211       lcall Timer2_Init
+01B9            212       
+01B9 120087     213       lcall LCD_4BIT
+01BC            214       ; For convenience a few handy macros are included in 'LCD_4bit.inc':
+01BC C0E0       215            push acc
+01BE 7401       215            mov a, #1
+01C0 14         215            dec a
+01C1 1200C7     215            lcall ?Set_Cursor_1 ; Select column and row
+01C4 D0E0       215            pop acc
+01C6 C083       216            push dph
+01C8 C082       216            push dpl
+01CA C0E0       216            push acc
+01CC 900118     216            mov dptr, #Initial_Message
+01CF 1200BA     216            lcall ?Send_Constant_String
+01D2 D0E0       216            pop acc
+01D4 D082       216            pop dpl
+01D6 D083       216            pop dph
+01D8 D200       217       setb half_seconds_flag
+01DA 753200     218            mov BCD_counter, #0x00
+01DD            219            
+01DD            220            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+01DD 120103     221            lcall NotesInit
+01E0            222            
+01E0            223            
+01E0 D2AF       224            setb EA   ; Enable Global interrupts
+01E2            225            ; After initialization the program stays in this 'forever' loop
+01E2            226   loop:
+01E2 20951C     227            jb CLEAR_BUTTON, loop_a  ; if the 'CLEAR' button is not pressed skip
+01E5 C002       228            push AR2
+01E7 7A32       228            mov R2, #50
+01E9 120038     228            lcall ?Wait_Milli_Seconds
+01EC D002       228            pop AR2         ; Debounce delay.  This macro is also in 'LCD_4bit.inc'
+01EE 209510     229            jb CLEAR_BUTTON, loop_a  ; if the 'CLEAR' button is not pressed skip
+01F1 3095FD     230            jnb CLEAR_BUTTON, $             ; Wait for button release.  The '$' means: jump to same instruction.
+01F4            231            ; A valid press of the 'CLEAR' button has been detected, reset the BCD counter.
+01F4            232            ; But first stop timer 2 and reset the milli-seconds counter, to resync everything.
+01F4 C2CA       233            clr TR2                 ; Stop timer 2
+01F6 E4         234            clr a
+01F7 F530       235            mov Count1ms+0, a
+01F9 F531       236            mov Count1ms+1, a
+01FB            237            ; Now clear the BCD counter
+01FB F532       238            mov BCD_counter, a
+01FD D2CA       239            setb TR2                ; Start timer 2
+01FF 8003       240            sjmp loop_b             ; Display the new value
+0201            241   loop_a:
+0201 3000DE     242            jnb half_seconds_flag, loop
+0204            243   loop_b:
+0204 C200       244       clr half_seconds_flag ; We clear this flag in the main loop, but it is set in the ISR for timer 2
+0206 C0E0       245            push acc
+0208 740E       245            mov a, #14
+020A 14         245            dec a
+020B 1200C7     245            lcall ?Set_Cursor_1 ; Select column and row
+020E D0E0       245            pop acc     ; the place in the LCD where we want the BCD counter value
+0210 C000       246            push ar0
+0212 A832       246            mov r0, BCD_counter
+0214 1200CC     246            lcall ?Display_BCD
+0217 D000       246            pop ar0 ; This macro is also in 'LCD_4bit.inc'
+0219 0201E2     247       ljmp loop
+021C            248   END

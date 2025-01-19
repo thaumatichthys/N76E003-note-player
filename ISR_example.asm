@@ -119,8 +119,8 @@ Timer0_ISR:
 	setb TR0
 	
 	 
-; cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
-	lcall NotesUpdate
+	cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+	; lcall NotesUpdate
 	reti
 
 ;---------------------------------;
@@ -170,7 +170,8 @@ Inc_Done:
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed
-	cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
+									;		cpl TR0
 	; Reset to zero the milli-seconds counter, it is a 16-bit variable
 	clr a
 	mov Count1ms+0, a
@@ -208,7 +209,7 @@ main:
           
     lcall Timer0_Init
     lcall Timer2_Init
-    setb EA   ; Enable Global interrupts
+    
     lcall LCD_4BIT
     ; For convenience a few handy macros are included in 'LCD_4bit.inc':
 	Set_Cursor(1, 1)
@@ -219,6 +220,8 @@ main:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lcall NotesInit
 	
+	
+	setb EA   ; Enable Global interrupts
 	; After initialization the program stays in this 'forever' loop
 loop:
 	jb CLEAR_BUTTON, loop_a  ; if the 'CLEAR' button is not pressed skip

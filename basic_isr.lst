@@ -1,0 +1,155 @@
+0000              1   ; ISR_example.asm: a) Increments/decrements a BCD variable every half second using
+0000              2   ; an ISR for timer 2; b) Generates a 2kHz square wave at pin P1.7 using
+0000              3   ; an ISR for timer 0; and c) in the 'main' loop it displays the variable
+0000              4   ; incremented/decremented using the ISR for timer 2 on the LCD.  Also resets it to 
+0000              5   ; zero if the 'CLEAR' push button connected to P1.5 is pressed.
+                  7   $LIST
+0000              9   
+0000             10   ;  N76E003 pinout:
+0000             11   ;                               -------
+0000             12   ;       PWM2/IC6/T0/AIN4/P0.5 -|1    20|- P0.4/AIN5/STADC/PWM3/IC3
+0000             13   ;               TXD/AIN3/P0.6 -|2    19|- P0.3/PWM5/IC5/AIN6
+0000             14   ;               RXD/AIN2/P0.7 -|3    18|- P0.2/ICPCK/OCDCK/RXD_1/[SCL]
+0000             15   ;                    RST/P2.0 -|4    17|- P0.1/PWM4/IC4/MISO
+0000             16   ;        INT0/OSCIN/AIN1/P3.0 -|5    16|- P0.0/PWM3/IC3/MOSI/T1
+0000             17   ;              INT1/AIN0/P1.7 -|6    15|- P1.0/PWM2/IC2/SPCLK
+0000             18   ;                         GND -|7    14|- P1.1/PWM1/IC1/AIN7/CLO
+0000             19   ;[SDA]/TXD_1/ICPDA/OCDDA/P1.6 -|8    13|- P1.2/PWM0/IC0
+0000             20   ;                         VDD -|9    12|- P1.3/SCL/[STADC]
+0000             21   ;            PWM5/IC7/SS/P1.5 -|10   11|- P1.4/SDA/FB/PWM1
+0000             22   ;                               -------
+0000             23   ;
+0000             24   
+0000             25   CLK           EQU 16000000 ; Microcontroller system frequency in Hz
+0000             26   TIMER0_RATE   EQU 16384     ; 2048Hz squarewave (peak amplitude of CEM-1203 speaker)
+0000             27   TIMER0_RELOAD EQU ((65536-(CLK/TIMER0_RATE)))
+0000             28   FREQ_CONST         EQU 65536 / TIMER0_RATE
+0000             29   
+0000             30   
+0000             31   SOUND_OUT     equ P1.7
+0000             32   
+0000             33   cseg
+0000             34   
+0000             35   ; Reset vector
+0000             36   org 0x0000
+0000 020095      37       ljmp main
+0003             38   
+0003             39   ; External interrupt 0 vector (not used in this code)
+0003             40   org 0x0003
+0003 32          41            reti
+0004             42   
+0004             43   ; Timer/Counter 0 overflow interrupt vector
+000B             44   org 0x000B
+000B 020087      45            ljmp Timer0_ISR
+000E             46   
+000E             47   ; External interrupt 1 vector (not used in this code)
+0013             48   org 0x0013
+0013 32          49            reti
+0014             50   
+0014             51   ; Timer/Counter 1 overflow interrupt vector (not used in this code)
+001B             52   org 0x001B
+001B 32          53            reti
+001C             54   
+001C             55   ; Serial port receive/transmit interrupt vector (not used in this code)
+0023             56   org 0x0023 
+0023 32          57            reti
+0024             58            
+0024             59   ; Timer/Counter 2 overflow interrupt vector
+002B             60   org 0x002B
+002B 32          61            reti
+002C             62   
+002C             63   
+002C             64   
+                 66   $LIST
+0071             68   
+0071             69   
+0071             70   ;---------------------------------;
+0071             71   ; Routine to initialize the ISR   ;
+0071             72   ; for timer 0                     ;
+0071             73   ;---------------------------------;
+0071             74   Timer0_Init:
+0071 438E08      75            orl CKCON, #0b00001000 ; Input for timer 0 is sysclk/1
+0074 E589        76            mov a, TMOD
+0076 54F0        77            anl a, #0xf0 ; 11110000 Clear the bits for timer 0
+0078 4401        78            orl a, #0x01 ; 00000001 Configure timer 0 as 16-timer
+007A F589        79            mov TMOD, a
+007C 758CFC      80            mov TH0, #high(TIMER0_RELOAD)
+007F 758A30      81            mov TL0, #low(TIMER0_RELOAD)
+0082             82            ; Enable the timer and interrupts
+0082 D2A9        83       setb ET0  ; Enable timer 0 interrupt
+0084 D28C        84       setb TR0  ; Start timer 0
+0086 22          85            ret
+0087             86   
+0087             87   ;---------------------------------;
+0087             88   ; ISR for timer 0.  Set to execute;
+0087             89   ; every 1/4096Hz to generate a    ;
+0087             90   ; 2048 Hz wave at pin SOUND_OUT   ;
+0087             91   ;---------------------------------;
+0087             92   Timer0_ISR:
+0087             93            ;clr TF0  ; According to the data sheet this is done for us already.
+0087             94            ; Timer 0 doesn't have 16-bit auto-reload, so
+0087 C28C        95            clr TR0
+0089 758CFC      96            mov TH0, #high(TIMER0_RELOAD)
+008C 758A30      97            mov TL0, #low(TIMER0_RELOAD)
+008F D28C        98            setb TR0
+0091             99            
+0091            100             
+0091            101   ; cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+0091 12002C     102            lcall NotesUpdate
+0094 32         103            reti
+0095            104   
+0095            105   
+0095            106   ;---------------------------------;
+0095            107   ; Main program. Includes hardware ;
+0095            108   ; initialization and 'forever'    ;
+0095            109   ; loop.                           ;
+0095            110   ;---------------------------------;
+0095            111   main:
+0095            112            ; Initialization
+0095 75817F     113       mov SP, #0x7F
+0098 75B100     114            mov P0M1, #0x00
+009B 75B200     115       mov P0M2, #0x00
+009E 75B300     116       mov P1M1, #0x00
+00A1 75B400     117       mov P1M2, #0x00
+00A4 75AD00     118       mov P3M2, #0x00
+00A7 75AD00     119       mov P3M2, #0x00
+00AA            120             
+00AA 120071     121       lcall Timer0_Init
+00AD            122   
+00AD            123   
+00AD            124   
+00AD            125            
+00AD            126            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+00AD 12005C     127            lcall NotesInit
+00B0            128            
+00B0            129   
+00B0            130            
+00B0            131            
+00B0 7401       132            mov a, #1
+00B2 7A09       133            mov r2, #high(588 * FREQ_CONST)
+00B4 7B30       134            mov r3, #low(588 * FREQ_CONST)
+00B6            135            
+00B6 12004C     136            lcall NoteStart
+00B9            137            
+00B9 7402       138            mov a, #2
+00BB 7A07       139            mov r2, #high(490 * FREQ_CONST)
+00BD 7BA8       140            mov r3, #low(490 * FREQ_CONST)
+00BF            141            
+00BF 12004C     142            lcall NoteStart
+00C2            143            
+00C2 7403       144            mov a, #3
+00C4 7A06       145            mov r2, #high(392 * FREQ_CONST)
+00C6 7B20       146            mov r3, #low(392 * FREQ_CONST)
+00C8            147            
+00C8 12004C     148            lcall NoteStart
+00CB            149            
+00CB            150            
+00CB            151            ; fout = tuning word * sample rate / 65535
+00CB            152            ; tunnig word = 65536 * fout / sample rate
+00CB            153            
+00CB            154            
+00CB D2AF       155            setb EA   ; Enable Global interrupts
+00CD            156            ; After initialization the program stays in this 'forever' loop
+00CD            157   loop:
+00CD 0200CD     158       ljmp loop
+00D0            159   END
