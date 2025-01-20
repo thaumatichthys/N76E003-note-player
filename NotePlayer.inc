@@ -26,8 +26,38 @@ player_run:			ds 1				; flag for player enabled
 cseg
 
 ; music_data:			db 	#high(540), #low(540), #high(0), #low(0), 0, #high(330), #low(330), #high(500), #low(500), 1
-music_data: db 1, 2, 3, 4, 5, 6,7, 7, 8, 10
 
+
+StartPlayingMusic: ; UNTESTED
+	; usage:
+	; mov dptr, #(music_data)
+	; lcall StartPlayingMusic 
+	
+	push ar0
+	
+	; set everything to zero first 
+	mov r0, #(isr_counter)
+	mov @r0, #0
+	
+	; set event countdown to dptr 
+	mov r0, #(event_countdown)
+	mov @r0, dpl 
+	inc r0 
+	mov @r0, dph 
+	
+	; set player_run 
+	mov r0, #(player_run)
+	mov @r0, #1
+	
+	pop ar0 
+	ret 
+	
+StopPlayingMusic: 	; UNTESTED
+	push ar0 
+	mov r0, #(player_run)
+	mov @r0, #0 
+	pop ar0 
+	ret 
 
 UpdateMIDIPlayer: 	; UNTESTED
 	; first check if this function should be doing anything at all
