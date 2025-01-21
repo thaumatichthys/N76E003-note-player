@@ -64,7 +64,17 @@ org 0x002B
 
 $NOLIST
 $include(NotePlayer.inc)
+$include(music.inc)
 $LIST
+
+WaitHalfSec:
+	mov R2, #100
+Ll3: mov R1, #200
+Ll2: mov R0, #104
+Ll1: djnz R0, Ll1 ; 4 cycles->4*60.285ns*104=25us
+	djnz R1, Ll2 ; 25us*200=5.0ms
+	djnz R2, Ll3 ; 5.0ms*100=0.5s (approximately)
+	ret
 
 
 ;---------------------------------;
@@ -126,26 +136,24 @@ main:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lcall NotesInit
 	
-
+	;setb P1.5
+	
+	;lcall WaitHalfSec
+	;
+	
+	clr P1.5
+	lcall WaitHalfSec
 	
 	
-	mov a, #1
+	
+	mov a, #5
 	mov r2, #high(588 * FREQ_CONST)
 	mov r3, #low(588 * FREQ_CONST)
 	
-	lcall NoteStart
+	;lcall NoteStart
 	
-	mov a, #2
-	mov r2, #high(490 * FREQ_CONST)
-	mov r3, #low(490 * FREQ_CONST)
-	
-	lcall NoteStart
-	
-	mov a, #3
-	mov r2, #high(392 * FREQ_CONST)
-	mov r3, #low(392 * FREQ_CONST)
-	
-	lcall NoteStart
+	mov dptr, #music_data
+	lcall StartPlayingMusic
 	
 	
 	; fout = tuning word * sample rate / 65535
@@ -155,5 +163,6 @@ main:
 	setb EA   ; Enable Global interrupts
 	; After initialization the program stays in this 'forever' loop
 loop:
+	; cpl P1.5
     ljmp loop
 END

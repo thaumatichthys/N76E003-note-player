@@ -39,11 +39,17 @@ StartPlayingMusic: ; UNTESTED
 	mov r0, #(isr_counter)
 	mov @r0, #0
 	
-	; set event countdown to dptr 
-	mov r0, #(event_countdown)
+	; set note pointer to dptr 
+	mov r0, #(note_pointer)
 	mov @r0, dpl 
 	inc r0 
 	mov @r0, dph 
+	
+	; set event counter to zero 
+	mov r0, #(event_countdown)
+	mov @r0, #0
+	inc r0 
+	mov @r0, #0
 	
 	; set player_run 
 	mov r0, #(player_run)
@@ -53,11 +59,18 @@ StartPlayingMusic: ; UNTESTED
 	ret 
 	
 StopPlayingMusic: 	; UNTESTED
+	;cpl P1.5
 	push ar0 
 	mov r0, #(player_run)
 	mov @r0, #0 
 	pop ar0 
 	ret 
+
+
+
+
+
+
 
 UpdateMIDIPlayer: 	; UNTESTED
 	; first check if this function should be doing anything at all
@@ -75,12 +88,15 @@ playerIsRunning:
 	push ar6 
 	push ar7
 
+	; increment the isr counter and AND with bitmask
 	mov r0, #(isr_counter)
 	inc @r0
 	mov a, @r0 
 	anl a, #(TICK_DIVIDER)
 	mov @r0, a 
 	
+	
+	; see if we should skip this 
 	jnz ISRCounter_skip
 	; START MIDI PLAYER THINGS
 	
@@ -96,7 +112,13 @@ playerIsRunning:
 	jnz eventCountdown_skip
 	; end check if event countdown is zero
 	
-	; load note_pointer into DPTR
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; this is missing all the shit, just testing rn
+	cpl P1.5
+	
+	
+	
+	; load note ptr into dptr 
+	
 	mov r0, #(note_pointer)
 	mov a, @r0 
 	mov dpl, a 
@@ -104,23 +126,20 @@ playerIsRunning:
 	mov a, @r0 
 	mov dph, a 
 	
+	
 	; put data into registers
 	mov a, #0
 	movc a, @a+dptr
 	mov r2, a 	; counter low 
-	
 	mov a, #1
 	movc a, @a+dptr
 	mov r3, a 	; counter high 
-	
 	mov a, #2
 	movc a, @a+dptr
 	mov r4, a 	; delay low 
-	
 	mov a, #3
 	movc a, @a+dptr
 	mov r5, a 	; delay high
-	
 	mov a, #4
 	movc a, @a+dptr
 	mov r6, a 	; metadata byte  
@@ -144,12 +163,14 @@ playerIsRunning:
 	; here, run the note off command 
 	mov a, r6 
 	lcall NoteStop
+	
+	
 	ljmp endConditionalsDJPA
 notNoteOff:		
 	; now see if it is note on, or data end 
 	mov a, r7 	
 	subb a, #0b00010000 ; subtract the note on command 
-	jnz notNoteOn
+	;jnz notNoteOn ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; bruh
 	
 	; here, run the note on command 
 	; note that r2 and r3 already have the counter values loaded. If they didnt, then we must load them into r2 and r3.
@@ -158,14 +179,23 @@ notNoteOff:
 	ljmp endConditionalsDJPA
 notNoteOn:
 	; here, we stop the execution. 
-	mov r0, #(player_run)
-	mov @r0, #0
+	lcall StopPlayingMusic
+	mov r4, #(N_CHANNELS)
+channelClearLoop:
+	mov a, r4
+	lcall NoteStop
+	djnz r4, channelClearLoop
+	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	
+	
+	
 endConditionalsDJPA:
 	
 	; start increment note_pointer
 	mov r0, #(note_pointer)
 	mov a, @r0 
-	add a, #5 
+	add a, #5 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; increment by 1 instead of 5 
 	mov @r0, a 
 	inc r0 
 	mov a, @r0 
@@ -175,7 +205,7 @@ endConditionalsDJPA:
 	
 	; start set event countdown
 	mov r0, #(event_countdown)
-	mov a, r4 
+	mov a, r4; 0x01; r4 
 	mov @r0, a 
 	inc r0 
 	mov a, r5
@@ -184,6 +214,16 @@ endConditionalsDJPA:
 	
 	; END MIDI PLAYER THINGS 
 eventCountdown_skip:
+	; decrement the event countdown, but FIRST, ENSURE IT IS NOT ZERO!!
+	
+	mov r0, #(event_countdown)
+	mov a, @r0
+	mov r2, a 
+	inc r0 
+	mov a, @r0 
+	orl a, r2 
+	jz ISRCounter_skip
+	
 	; start decrement event_countdown 
 	mov r0, #(event_countdown)
 	mov a, @r0
@@ -254,6 +294,7 @@ NotesUpdate: ; no parameters ; UNTESTED
 
 
 NoteStop: ; channel to stop in a	; UNTESTED
+	
 	push ar1
 	push ar4 
 	mov b, #2 
@@ -274,15 +315,16 @@ NoteStop: ; channel to stop in a	; UNTESTED
 	mov a, r1 
 	add a, r4 ; now A has the memory address of phase_accum
 	mov r1, a 
-	mov @r1, #0 
+	mov @r1, #0xff 
 	inc r1 
-	mov @r1, #0
+	mov @r1, #0xff
 	
 	pop ar4 
 	pop ar1
 	ret
 
 NoteStart: ; channel to start in a, tuning word high in r2, low in r3.
+	
 	push ar1
 	push ar4 
 	mov b, #2
@@ -293,10 +335,10 @@ NoteStart: ; channel to start in a, tuning word high in r2, low in r3.
 	mov a, r1 
 	add a, r4 ; now A has the memory address of tuning word 
 	mov r1, a 
-	mov a, r3 
+	mov a, r2 
 	mov @r1, a 
 	inc r1 
-	mov a, r2 
+	mov a, r3 
 	mov @r1, a
 	pop ar4 
 	pop ar1
