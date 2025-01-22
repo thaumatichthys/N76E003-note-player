@@ -17,7 +17,7 @@ midi_input_path = "../midi_files/william-tell-overture.mid"
 text_output_path = "../music.inc"
 
 # the N76E003 has really limited flash, so this option lets you cut off the rest of the track
-max_output_size_bytes = 14000
+max_output_size_bytes = 15000
 
 BASE_FREQ = 440  # reference freq
 SAMPLE_RATE = 16384

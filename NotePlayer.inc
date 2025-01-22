@@ -71,7 +71,6 @@ StartPlayingMusic:
 ; lcall StopPlayingMusic          ;
 ;---------------------------------;
 StopPlayingMusic:
-	;cpl P1.5
 	push ar0 
 	push ar4
 	mov r0, #(player_run)
@@ -299,7 +298,7 @@ NotesUpdate: ; no parameters
 ; lcall NoteStop                  ;
 ;---------------------------------;
 NoteStop: ; channel to stop in a
-	
+	cpl P1.5
 	push ar1
 	push ar4 
 	mov b, #2 

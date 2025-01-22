@@ -32,7 +32,7 @@
 0000             34   
 0000             35   ; Reset vector
 0000             36   org 0x0000
-0000 023878      37       ljmp main
+0000 023C62      37       ljmp main
 0003             38   
 0003             39   ; External interrupt 0 vector (not used in this code)
 0003             40   org 0x0003
@@ -40,7 +40,7 @@
 0004             42   
 0004             43   ; Timer/Counter 0 overflow interrupt vector
 000B             44   org 0x000B
-000B 02386A      45            ljmp Timer0_ISR
+000B 023C54      45            ljmp Timer0_ISR
 000E             46   
 000E             47   ; External interrupt 1 vector (not used in this code)
 0013             48   org 0x0013
@@ -61,103 +61,103 @@
 002C             63   
 002C             64   
                  67    $LIST
-3847             69   
-3847             70   WaitHalfSec:
-3847 7A64        71            mov R2, #100
-3849 79C8        72   Ll3: mov R1, #200
-384B 7868        73   Ll2: mov R0, #104
-384D D8FE        74   Ll1: djnz R0, Ll1 ; 4 cycles->4*60.285ns*104=25us
-384F D9FA        75            djnz R1, Ll2 ; 25us*200=5.0ms
-3851 DAF6        76            djnz R2, Ll3 ; 5.0ms*100=0.5s (approximately)
-3853 22          77            ret
-3854             78   
-3854             79   
-3854             80   ;---------------------------------;
-3854             81   ; Routine to initialize the ISR   ;
-3854             82   ; for timer 0                     ;
-3854             83   ;---------------------------------;
-3854             84   Timer0_Init:
-3854 438E08      85            orl CKCON, #0b00001000 ; Input for timer 0 is sysclk/1
-3857 E589        86            mov a, TMOD
-3859 54F0        87            anl a, #0xf0 ; 11110000 Clear the bits for timer 0
-385B 4401        88            orl a, #0x01 ; 00000001 Configure timer 0 as 16-timer
-385D F589        89            mov TMOD, a
-385F 758CFC      90            mov TH0, #high(TIMER0_RELOAD)
-3862 758A30      91            mov TL0, #low(TIMER0_RELOAD)
-3865             92            ; Enable the timer and interrupts
-3865 D2A9        93       setb ET0  ; Enable timer 0 interrupt
-3867 D28C        94       setb TR0  ; Start timer 0
-3869 22          95            ret
-386A             96   
-386A             97   ;---------------------------------;
-386A             98   ; ISR for timer 0.  Set to execute;
-386A             99   ; every 1/4096Hz to generate a    ;
-386A            100   ; 2048 Hz wave at pin SOUND_OUT   ;
-386A            101   ;---------------------------------;
-386A            102   Timer0_ISR:
-386A            103            ;clr TF0  ; According to the data sheet this is done for us already.
-386A            104            ; Timer 0 doesn't have 16-bit auto-reload, so
-386A C28C       105            clr TR0
-386C 758CFC     106            mov TH0, #high(TIMER0_RELOAD)
-386F 758A30     107            mov TL0, #low(TIMER0_RELOAD)
-3872 D28C       108            setb TR0
-3874            109            
-3874            110             
-3874            111   ; cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
-3874 120127     112            lcall NotesUpdate
-3877 32         113            reti
-3878            114   
-3878            115   
-3878            116   ;---------------------------------;
-3878            117   ; Main program. Includes hardware ;
-3878            118   ; initialization and 'forever'    ;
-3878            119   ; loop.                           ;
-3878            120   ;---------------------------------;
-3878            121   main:
-3878            122            ; Initialization
-3878 75817F     123       mov SP, #0x7F
-387B 75B100     124            mov P0M1, #0x00
-387E 75B200     125       mov P0M2, #0x00
-3881 75B300     126       mov P1M1, #0x00
-3884 75B400     127       mov P1M2, #0x00
-3887 75AD00     128       mov P3M2, #0x00
-388A 75AD00     129       mov P3M2, #0x00
-388D            130             
-388D 123854     131       lcall Timer0_Init
-3890            132   
-3890            133   
-3890            134   
-3890            135            
-3890            136            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-3890 120168     137            lcall NotesInit
-3893            138            
-3893            139            ;setb P1.5
-3893            140            
-3893            141            ;lcall WaitHalfSec
-3893            142            ;
-3893            143            
-3893 C295       144            clr P1.5
-3895 123847     145            lcall WaitHalfSec
-3898            146            
-3898            147            
-3898            148            
-3898 7405       149            mov a, #5
-389A 7A09       150            mov r2, #high(588 * FREQ_CONST)
-389C 7B30       151            mov r3, #low(588 * FREQ_CONST)
-389E            152            
-389E            153            ;lcall NoteStart
-389E            154            
-389E 90018D     155            mov dptr, #music_data
-38A1 12002C     156            lcall StartPlayingMusic
-38A4            157            
-38A4            158            
-38A4            159            ; fout = tuning word * sample rate / 65535
-38A4            160            ; tunnig word = 65536 * fout / sample rate
-38A4            161            
-38A4            162            
-38A4 D2AF       163            setb EA   ; Enable Global interrupts
-38A6            164            ; After initialization the program stays in this 'forever' loop
-38A6            165   loop:
-38A6            166            ; cpl P1.5
-38A6 0238A6     167       ljmp loop
-38A9            168   END
+3C31             69   
+3C31             70   WaitHalfSec:
+3C31 7A64        71            mov R2, #100
+3C33 79C8        72   Ll3: mov R1, #200
+3C35 7868        73   Ll2: mov R0, #104
+3C37 D8FE        74   Ll1: djnz R0, Ll1 ; 4 cycles->4*60.285ns*104=25us
+3C39 D9FA        75            djnz R1, Ll2 ; 25us*200=5.0ms
+3C3B DAF6        76            djnz R2, Ll3 ; 5.0ms*100=0.5s (approximately)
+3C3D 22          77            ret
+3C3E             78   
+3C3E             79   
+3C3E             80   ;---------------------------------;
+3C3E             81   ; Routine to initialize the ISR   ;
+3C3E             82   ; for timer 0                     ;
+3C3E             83   ;---------------------------------;
+3C3E             84   Timer0_Init:
+3C3E 438E08      85            orl CKCON, #0b00001000 ; Input for timer 0 is sysclk/1
+3C41 E589        86            mov a, TMOD
+3C43 54F0        87            anl a, #0xf0 ; 11110000 Clear the bits for timer 0
+3C45 4401        88            orl a, #0x01 ; 00000001 Configure timer 0 as 16-timer
+3C47 F589        89            mov TMOD, a
+3C49 758CFC      90            mov TH0, #high(TIMER0_RELOAD)
+3C4C 758A30      91            mov TL0, #low(TIMER0_RELOAD)
+3C4F             92            ; Enable the timer and interrupts
+3C4F D2A9        93       setb ET0  ; Enable timer 0 interrupt
+3C51 D28C        94       setb TR0  ; Start timer 0
+3C53 22          95            ret
+3C54             96   
+3C54             97   ;---------------------------------;
+3C54             98   ; ISR for timer 0.  Set to execute;
+3C54             99   ; every 1/4096Hz to generate a    ;
+3C54            100   ; 2048 Hz wave at pin SOUND_OUT   ;
+3C54            101   ;---------------------------------;
+3C54            102   Timer0_ISR:
+3C54            103            ;clr TF0  ; According to the data sheet this is done for us already.
+3C54            104            ; Timer 0 doesn't have 16-bit auto-reload, so
+3C54 C28C       105            clr TR0
+3C56 758CFC     106            mov TH0, #high(TIMER0_RELOAD)
+3C59 758A30     107            mov TL0, #low(TIMER0_RELOAD)
+3C5C D28C       108            setb TR0
+3C5E            109            
+3C5E            110             
+3C5E            111   ; cpl SOUND_OUT ; Connect speaker the pin assigned to 'SOUND_OUT'!
+3C5E 120127     112            lcall NotesUpdate
+3C61 32         113            reti
+3C62            114   
+3C62            115   
+3C62            116   ;---------------------------------;
+3C62            117   ; Main program. Includes hardware ;
+3C62            118   ; initialization and 'forever'    ;
+3C62            119   ; loop.                           ;
+3C62            120   ;---------------------------------;
+3C62            121   main:
+3C62            122            ; Initialization
+3C62 75817F     123       mov SP, #0x7F
+3C65 75B100     124            mov P0M1, #0x00
+3C68 75B200     125       mov P0M2, #0x00
+3C6B 75B300     126       mov P1M1, #0x00
+3C6E 75B400     127       mov P1M2, #0x00
+3C71 75AD00     128       mov P3M2, #0x00
+3C74 75AD00     129       mov P3M2, #0x00
+3C77            130             
+3C77 123C3E     131       lcall Timer0_Init
+3C7A            132   
+3C7A            133   
+3C7A            134   
+3C7A            135            
+3C7A            136            ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+3C7A 12016A     137            lcall NotesInit
+3C7D            138            
+3C7D            139            ;setb P1.5
+3C7D            140            
+3C7D            141            ;lcall WaitHalfSec
+3C7D            142            ;
+3C7D            143            
+3C7D C295       144            clr P1.5
+3C7F 123C31     145            lcall WaitHalfSec
+3C82            146            
+3C82            147            
+3C82            148            
+3C82 7405       149            mov a, #5
+3C84 7A09       150            mov r2, #high(588 * FREQ_CONST)
+3C86 7B30       151            mov r3, #low(588 * FREQ_CONST)
+3C88            152            
+3C88            153            ;lcall NoteStart
+3C88            154            
+3C88 90018F     155            mov dptr, #music_data
+3C8B 12002C     156            lcall StartPlayingMusic
+3C8E            157            
+3C8E            158            
+3C8E            159            ; fout = tuning word * sample rate / 65535
+3C8E            160            ; tunnig word = 65536 * fout / sample rate
+3C8E            161            
+3C8E            162            
+3C8E D2AF       163            setb EA   ; Enable Global interrupts
+3C90            164            ; After initialization the program stays in this 'forever' loop
+3C90            165   loop:
+3C90            166            ; cpl P1.5
+3C90 023C90     167       ljmp loop
+3C93            168   END
