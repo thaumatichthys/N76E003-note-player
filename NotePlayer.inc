@@ -1,5 +1,5 @@
 N_CHANNELS 			equ 8  ; dont change this! if you increase it beyond 16, you need to change other stuff!
-DUTY_CYCLE			equ 16 ; divide by 256 to get each channel's duty cycle. Total is approx (num of channels enabled) * DUTY_CYCLE / 256.
+DUTY_CYCLE			equ 8 ; divide by 256 to get each channel's duty cycle. Total is approx (num of channels enabled) * DUTY_CYCLE / 256.
 TICK_DIVIDER		equ 0b00111111 ; resolution of the note player's timebase in terms of samples (bitmask)
 
 
@@ -169,8 +169,10 @@ playerIsRunning:
 notNoteOff:		
 	; now see if it is note on, or data end 
 	mov a, r7 	
+	clr c
 	subb a, #0b00010000 ; subtract the note on command 
-	;jnz notNoteOn ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; bruh
+	;;anl a, #0xF0
+	jnz notNoteOn ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; bruh
 	
 	; here, run the note on command 
 	; note that r2 and r3 already have the counter values loaded. If they didnt, then we must load them into r2 and r3.
