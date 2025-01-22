@@ -13,7 +13,7 @@ import numpy as np
 # ;             0011_0000 --> end of data
 
 # --------- CONFIG START --------- #
-midi_input_path = "../midi_files/YoruNiKakeru.mid"
+midi_input_path = "../midi_files/william-tell-overture.mid"
 text_output_path = "../music.inc"
 
 # the N76E003 has really limited flash, so this option lets you cut off the rest of the track
@@ -23,7 +23,7 @@ BASE_FREQ = 440  # reference freq
 SAMPLE_RATE = 16384
 TICK_DIVIDER = 64  # the sample rate bitmask for each tick
 FREQ_COEFF = int(65536 / SAMPLE_RATE)  # 2^16 / SAMPLE_RATE for the 8051 program
-N_CHANNELS = 8
+N_CHANNELS = 16
 # ---------- CONFIG END ---------- #
 tick_rate = SAMPLE_RATE / TICK_DIVIDER  # in Hz
 
@@ -77,7 +77,8 @@ for msg in mid:
                             using_channel = i
                             metadata = 0b00000000
                             break
-
+                if using_channel < 0:
+                    print("Ran out of channels!!")
                 # if for some reason the channel is not found, ignore the command
                 if not (using_channel == -1):
                     # use data from prev_msg, but time from current msg
@@ -98,6 +99,7 @@ for msg in mid:
                         output_str += str(hex(d)) + ", "
                     output_length += 5
                     if output_length >= max_output_size_bytes:
+                        print("File got clipped!")
                         break
 
         prev_msg = msg

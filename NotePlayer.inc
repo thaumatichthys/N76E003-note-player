@@ -1,9 +1,9 @@
 ; Written by Max Xiang, Jan 22 2025
 
-; Architecture: 8-channel Direct Digital Synthesizer capable of producing 8 frequencies at a time, range between 0 and 8 kHz, +- 0.25 Hz (Current configuration)
+; Architecture: 16-channel Direct Digital Synthesizer capable of producing 16 frequencies at a time, range between 0 and 8 kHz, +- 0.25 Hz (Current configuration)
 
 
-N_CHANNELS 			equ 8  ; dont change this! if you increase it beyond 16, you need to change other stuff!
+N_CHANNELS 			equ 16 ; dont change this! if you increase it beyond 16, you need to change other stuff!
 DUTY_CYCLE			equ 24 ; divide by 256 to get each channel's duty cycle. Total is approx (num of channels enabled) * DUTY_CYCLE / 256.
 TICK_DIVIDER		equ 0b00111111 ; resolution of the note player's timebase in terms of samples (bitmask)
 
