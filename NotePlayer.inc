@@ -15,25 +15,25 @@ TICK_DIVIDER		equ 0b00111111 ; resolution of the note player's timebase in terms
 ; example: 0x1A, 0x02, 0x12, 0x34, 0x2
 ; 
 ; metadata: 0000 --> note off; 
-; 			0001 --> note on;
-; 			0011 --> end of data 
+;           0001 --> note on;
+;           0011 --> end of data 
 
 dseg ; the following should be in data ram
 
 org 0x30
-phase_accum: 		ds (2*N_CHANNELS) 	; 16 bit phase accumulators
-tunings_words: 		ds (2*N_CHANNELS) 	; 16 bit tuning words
-isr_counter:		ds 1				; 8 bit counter for tick divider
-note_pointer:		ds 2				; 16 bit counter/pointer for data read address 
-event_countdown:	ds 2				; 16 bit countdown for next command 
-player_run:			ds 1				; flag for player enabled
+phase_accum:        ds (2*N_CHANNELS)   ; 16 bit phase accumulators
+tunings_words:      ds (2*N_CHANNELS)   ; 16 bit tuning words
+isr_counter:        ds 1                ; 8 bit counter for tick divider
+note_pointer:       ds 2                ; 16 bit counter/pointer for data read address 
+event_countdown:    ds 2                ; 16 bit countdown for next command 
+player_run:         ds 1                ; flag for player enabled
 
 cseg
 
 ;---------------------------------;
 ; Routine to start the MIDI player;
 ; usage: mov dptr, #(music_data)  ;
-; lcall StartPlayingMusic 		  ;
+; lcall StartPlayingMusic         ;
 ;---------------------------------;
 StartPlayingMusic:
 	; usage:
